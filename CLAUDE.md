@@ -37,6 +37,17 @@ TypeScript 5.8 / esbuild 0.25 (cjs 번들 → `main.js`) / jest + ts-jest.
 | `src/settings.ts` | 설정 타입·기본값·설정 탭 | 있음 |
 | `src/main.ts` | 플러그인 진입, 커맨드 등록, Vault 입출력 | 있음 |
 
+기능을 묶는 단위는 **ToolGroup** 이다 (→ `docs/glossary/README.md`). 현재 두 개다.
+
+| ToolGroup | 포함 | 파일 |
+|---|---|---|
+| 데일리 로그 | 전일 진행 업무 로드, 데일리 노트 템플릿 삽입 | `daily-log.ts` · `template.ts` |
+| 스크럼(scrum) | 스크럼 내용 복사, 스크럼 영역 넣기 | `scrum.ts` · `markers.ts` |
+
+지금은 `src/` 가 평평하다. **세 번째 ToolGroup 이 생기면 그때 `src/<toolgroup>/` 로 나눈다** —
+두 개뿐인데 미리 나누면 왕복만 는다. 새 기능은 기존 ToolGroup 에 넣을지 새로 만들지
+먼저 정하고 시작한다.
+
 이 경계가 곧 테스트 가능 범위다. 아래를 반드시 읽을 것.
 
 ---
@@ -112,6 +123,55 @@ vault 경로는 스킬의 `config.json` 에 저장돼 있다.
 
 대상은 `manifest.json` 의 `id` 에서 정해진다 → `<vault>/.obsidian/plugins/inno-daily-log/`
 대상 폴더의 `data.json`(사용자 설정값)은 건드리지 않는다.
+
+## 프로젝트 규칙 (my-app-init, 2026-09-17 확정)
+
+### git
+- author: `JeongJaew0n <JeongJaew0n@users.noreply.github.com>` — `git config --local` 로
+  설정돼 있다. 커밋 전 `git config user.email` 로 확인한다.
+  **global 은 개인 이메일이고 이름에 사내 소속이 붙어 있다.** origin 이
+  공개 GitHub 라 local 설정이 반드시 살아 있어야 한다. 이 규칙을 정하기 전의 커밋 5개는
+  옛 author 로 남아 있다 — 히스토리를 다시 쓰지 않는 한 그대로다.
+- 커밋·푸시: **전자동.** 작업 단위마다 커밋하고, 확인 없이 `main` 으로 푸시한다.
+  이건 사용자가 **2026-09-17 에 준 지속적 승인**이다. 근거 없이 자동 푸시하는 것과 구분된다.
+- 브랜치: **main 고정.** 브랜치를 만들지 않고 `main` 에 직접 커밋한다.
+- **예외 — 리뷰는 자동 커밋·푸시하지 않는다.** 코드리뷰·리뷰 문서, 그리고 리뷰에서
+  나온 수정은 위 정책이 '전자동'이어도 사람이 읽고 판단한 뒤에 커밋한다.
+  리뷰는 사실이 아니라 의견이고, 틀린 의견이 먼저 기록에 박히면 되돌리기 어렵다.
+
+### docs
+- 여러 단계짜리 작업은 코드를 건드리기 전에 `docs/plans/<slug>/` 에 계획을 먼저 쓴다.
+- 원인 찾는 데 시간이 걸린 오류는 `docs/troubleshootings/` 에 남긴다.
+  원인이 라이브러리·런타임·OS 에 있으면 `reusable/`, 이 프로젝트의 코드·설정에
+  있으면 `project-specific/`.
+- 도메인 용어를 새로 만들거나 이름을 바꾸면 `docs/glossary/README.md` 를 먼저 고치고
+  코드를 그 이름에 맞춘다. 코드만 바꾸면 용어집이 거짓말이 된다.
+
+### 버전
+- **0.x.x 에 머문다. 1.0.0 으로 올리지 않는다.** 내부에서 쓰는 플러그인이라 공개 API
+  안정성을 약속하지 않는다.
+- **Semantic Versioning** 을 따르되 0.x 구간의 관례를 쓴다.
+
+  | 변경 | 올리는 자리 | 예 |
+  |---|---|---|
+  | 호환이 깨지는 변경 | **MINOR** (0.y) | `0.3.4` → `0.4.0` |
+  | 기능 추가 (호환 유지) | MINOR | `0.3.4` → `0.4.0` |
+  | 버그 수정·내부 정리 | PATCH | `0.3.4` → `0.3.5` |
+
+  1.x 에서는 호환 깨짐이 MAJOR 를 올리지만 **0.x 에는 올릴 MAJOR 가 없다.** 그래서
+  MINOR 가 그 역할을 대신한다. semver 규격 본문이 아니라 0.x 구간의 관례다.
+- 번호의 **정본은 `package.json` 의 `version`** 이다. 현재 `0.2.0`.
+  `manifest.json` 과 `versions.json` 의 번호는 `npm version` 이 `version-bump.mjs` 로
+  **생성**하는 사본이다. 손으로 고치지 않는다 — 정본은 한 곳이다.
+- 올릴 때는 `npm version <patch|minor> --no-git-tag-version` 을 쓴다.
+  `--no-git-tag-version` 없이 돌리면 npm 이 제멋대로 커밋·태그까지 만든다.
+- 버전을 올린 커밋에는 무엇이 올랐는지 한 줄 적는다. 번호만 바뀌면 나중에 왜 올렸는지
+  알 수 없다.
+
+### 설계
+- 기능 묶음 단위는 **ToolGroup** 이다. 새 기능은 기존 ToolGroup 에 넣을지 새 ToolGroup 을
+  만들지 먼저 정하고 시작한다. 코드의 디렉터리·타입 이름도 이 말을 쓴다.
+  현재 ToolGroup 목록은 위 `## 구조` 를 본다.
 
 ## 저장소
 
