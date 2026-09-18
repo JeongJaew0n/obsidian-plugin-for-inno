@@ -1,6 +1,6 @@
 {
   "name": "obsidian-inno-daily-log",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Obsidian 데일리 노트의 inno 업무 양식을 관리하는 플러그인",
   "main": "main.js",
   "type": "module",

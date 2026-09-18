@@ -1,9 +1,9 @@
 {
   "id": "inno-daily-log",
   "name": "Inno Daily Log",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "minAppVersion": "0.15.0",
-  "description": "데일리 노트의 '금일 예정 업무'를 다음 날 '전일 진행 업무'로 옮기고, 업무 양식 템플릿을 삽입합니다.",
+  "description": "데일리 노트의 '금일 예정 업무'를 다음 날 '전일 진행 업무'로 옮기고, 업무 양식 템플릿 삽입과 스크럼(scrum) 영역 복사를 제공합니다.",
   "author": "jjw",
   "isDesktopOnly": false
 }
