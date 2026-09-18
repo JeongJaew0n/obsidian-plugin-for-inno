@@ -32,6 +32,8 @@ TypeScript 5.8 / esbuild 0.25 (cjs 번들 → `main.js`) / jest + ts-jest.
 |---|---|---|
 | `src/daily-log.ts` | 섹션 파싱·치환, 이전 노트 탐색 | **없음** |
 | `src/template.ts` | 기본 양식 상수, 날짜 포맷, 변수 치환 | **없음** |
+| `src/markers.ts` | 마커 쌍으로 감싼 영역 탐색 (코드블록·frontmatter 안은 무시) | **없음** |
+| `src/scrum.ts` | 스크럼 마커 상수, 영역 추출·검증, 새 영역 생성 | **없음** |
 | `src/settings.ts` | 설정 타입·기본값·설정 탭 | 있음 |
 | `src/main.ts` | 플러그인 진입, 커맨드 등록, Vault 입출력 | 있음 |
 
@@ -81,19 +83,32 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 ## 테스트 경계
 
-자동 테스트는 `daily-log.ts` / `template.ts` 순수 함수만 덮는다 (18개).
-**커맨드 등록, 설정 탭, 실제 Vault 쓰기는 자동 검증 대상이 아니다** — Obsidian API 목이 없다.
+자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (28개).
+**커맨드 등록, 설정 탭, 실제 Vault 쓰기, 클립보드는 자동 검증 대상이 아니다** — Obsidian
+API 목이 없고, 클립보드는 창 포커스와 권한에 의존해 헤드리스에서 재현되지 않는다.
+
+클립보드를 건드렸으면 `osascript -e 'clipboard info'` 로 flavor 목록을 눈으로 확인한다.
+확인할 것은 값이 아니라 **`«class HTML»` 의 존재 여부**다. 검증은 **Obsidian 창을
+활성화한 상태**에서 한다 — `clipboard.write()` 는 포커스가 없으면 거부하고, 폴백이
+조용히 평문만 싣는다. 자세한 건
+`docs/troubleshootings/reusable/clipboard-writetext-loses-formatting.md` 를 본다.
 
 이 영역을 고쳤으면 "동작합니다"라고 쓰지 말고, 실제 Vault 에서 확인했는지 여부를 명시한다.
 
 ## 배포
 
-로컬 Vault 배포는 개인 스킬 `obsidian-local-deploy` 를 쓴다.
-**반드시 소스 저장소를 인자로 넘긴다** — 생략하면 기본값이 폐기된 dooray 저장소다.
+로컬 Vault 배포는 개인 스킬 `obsidian-plugin-local-deployment` 를 쓴다.
+이 스킬은 `disable-model-invocation` 이라 **사용자가 슬래시로 직접 호출해야** 한다.
+스크립트를 직접 돌릴 때는 `--src` 로 **반드시 소스 저장소를 넘긴다** — 생략하면 현재 디렉터리다.
 
 ```bash
-~/.claude/skills/obsidian-local-deploy/scripts/deploy.sh /Users/jjw/my/Dev/obsidian-plugin-for-inno
+~/.claude/skills/obsidian-plugin-local-deployment/bin/obsidian-deploy.sh \
+  --src /Users/jjw/my/Dev/obsidian-plugin-for-inno \
+  --plugins-dir /Users/jjw/my/Dev/obsidian/.obsidian/plugins
 ```
+
+`--dry-run` 을 붙이면 복사하지 않고 무엇을 할지만 출력한다. 먼저 이걸로 대상을 확인한다.
+vault 경로는 스킬의 `config.json` 에 저장돼 있다.
 
 대상은 `manifest.json` 의 `id` 에서 정해진다 → `<vault>/.obsidian/plugins/inno-daily-log/`
 대상 폴더의 `data.json`(사용자 설정값)은 건드리지 않는다.
