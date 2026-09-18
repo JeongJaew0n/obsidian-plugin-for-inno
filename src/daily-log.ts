@@ -4,6 +4,27 @@ export const DEFAULT_TODAY_WORK_SECTION = "금일 예정 업무";
 const DAILY_NOTE_DATE_RE = /(?:^|\/)(\d{4}-\d{2}-\d{2})(?=\s|\.md$|$)/;
 const MONTH_FOLDER_RE = /^\d{4}-\d{2}$/;
 
+/**
+ * 얼마나 과거까지 거슬러 올라가 전일 노트를 찾을지.
+ *
+ * 속도보다 의미 때문에 둔다 — 1년 전 노트의 업무를 '전일 진행 업무' 로 끌어오는 것은
+ * 그 자체로 틀린 동작이다. 후보를 전부 훑는 최악 경로를 함께 막는 효과도 있다.
+ */
+export const MAX_LOOKBACK_DAYS = 365;
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** `YYYY-MM-DD` 에서 n 일을 뺀 `YYYY-MM-DD`. 시간대 영향을 받지 않게 UTC 로 센다. */
+function subtractDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number) as [
+    number,
+    number,
+    number
+  ];
+  const shifted = new Date(Date.UTC(year, month - 1, day) - days * MS_PER_DAY);
+  return shifted.toISOString().slice(0, 10);
+}
+
 function normalizeSectionHeading(line: string): string | null {
   const normalized = line.replace(/\u00a0/g, " ").trim();
   const match = normalized.match(/^\*\*\[\s*(.*?)\s*\]\*\*$/);
@@ -142,7 +163,8 @@ function isWithinFolder(path: string, folder: string): boolean {
 
 /**
  * 현재 노트보다 앞선 날짜의 데일리 노트 경로를 최신순으로 돌려준다.
- * 탐색 범위는 resolveSearchRoot 가 정한 루트 폴더의 하위 전체다.
+ * 탐색 범위는 resolveSearchRoot 가 정한 루트 폴더의 하위 전체이고,
+ * 과거로는 MAX_LOOKBACK_DAYS 일까지만 본다.
  */
 export function getPreviousDailyNotePaths(
   currentPath: string,
@@ -153,6 +175,7 @@ export function getPreviousDailyNotePaths(
   if (!currentDate) return [];
 
   const searchRoot = resolveSearchRoot(currentPath, configuredRoot);
+  const oldestDate = subtractDays(currentDate, MAX_LOOKBACK_DAYS);
 
   return markdownPaths
     .filter(
@@ -161,7 +184,9 @@ export function getPreviousDailyNotePaths(
     .map((path) => ({ path, date: getDailyNoteDate(path) }))
     .filter(
       (candidate): candidate is { path: string; date: string } =>
-        candidate.date !== null && candidate.date < currentDate
+        candidate.date !== null &&
+        candidate.date < currentDate &&
+        candidate.date >= oldestDate
     )
     .sort(
       (a, b) => b.date.localeCompare(a.date) || a.path.localeCompare(b.path)

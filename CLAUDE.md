@@ -84,6 +84,10 @@ Cannot find module 'obsidian' from 'src/settings.ts'
   같은 부모 폴더만 훑으면 **매월 1일에 전월 노트를 놓친다.** 전신 플러그인의 버그가 이것이다.
   `resolveSearchRoot` 가 부모 폴더 이름이 `YYYY-MM` 형태면 한 단계 위를 쓰는 이유다.
 - 이 동작을 건드릴 때는 월 경계 테스트를 반드시 함께 확인한다.
+- 과거 탐색은 `MAX_LOOKBACK_DAYS`(365일)까지다. **속도가 아니라 의미 때문에 둔 제한이다** —
+  1년 전 노트의 업무를 '전일 진행 업무' 로 끌어오는 건 그 자체로 틀린 동작이다.
+  후보를 전부 훑는 최악 경로를 막는 효과도 따라온다. 날짜 계산은 시간대 영향을 받지 않게
+  UTC 로 하고, 윤년 경계 테스트가 이를 고정한다.
 
 ### Vault 쓰기
 
@@ -94,7 +98,7 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 ## 테스트 경계
 
-자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (28개).
+자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (31개).
 **커맨드 등록, 설정 탭, 실제 Vault 쓰기, 클립보드는 자동 검증 대상이 아니다** — Obsidian
 API 목이 없고, 클립보드는 창 포커스와 권한에 의존해 헤드리스에서 재현되지 않는다.
 

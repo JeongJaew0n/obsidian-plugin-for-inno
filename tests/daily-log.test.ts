@@ -1,5 +1,6 @@
 import {
   DEFAULT_PREVIOUS_WORK_SECTION,
+  MAX_LOOKBACK_DAYS,
   DEFAULT_TODAY_WORK_SECTION,
   extractSection,
   getDailyNoteDate,
@@ -168,5 +169,41 @@ describe("이전 데일리 노트 탐색", () => {
         "Work/Daily/2026-08/2026-08-31 Abraxas.md",
       ])
     ).toEqual([]);
+  });
+
+  test("365일보다 오래된 노트는 후보에서 뺀다", () => {
+    const currentPath = "Work/Daily/2026-09/2026-09-01 Abraxas.md";
+    const paths = [
+      currentPath,
+      "Work/Daily/2025-09/2025-09-02 Abraxas.md", // 364일 전 — 포함
+      "Work/Daily/2025-09/2025-09-01 Abraxas.md", // 365일 전 — 경계, 포함
+      "Work/Daily/2025-08/2025-08-31 Abraxas.md", // 366일 전 — 제외
+      "Work/Daily/2024-09/2024-09-01 Abraxas.md", // 2년 전 — 제외
+    ];
+
+    expect(getPreviousDailyNotePaths(currentPath, paths)).toEqual([
+      "Work/Daily/2025-09/2025-09-02 Abraxas.md",
+      "Work/Daily/2025-09/2025-09-01 Abraxas.md",
+    ]);
+  });
+
+  test("윤년을 건너뛰어도 경계가 밀리지 않는다", () => {
+    // 2024-02-29 를 사이에 둔 구간. 단순히 365를 빼면 하루가 어긋난다.
+    const currentPath = "Work/Daily/2024-06/2024-06-01 Abraxas.md";
+    const paths = [
+      currentPath,
+      "Work/Daily/2023-06/2023-06-03 Abraxas.md", // 364일 전 — 포함
+      "Work/Daily/2023-06/2023-06-02 Abraxas.md", // 365일 전 — 경계, 포함
+      "Work/Daily/2023-06/2023-06-01 Abraxas.md", // 366일 전 — 제외
+    ];
+
+    expect(getPreviousDailyNotePaths(currentPath, paths)).toEqual([
+      "Work/Daily/2023-06/2023-06-03 Abraxas.md",
+      "Work/Daily/2023-06/2023-06-02 Abraxas.md",
+    ]);
+  });
+
+  test("제한 값은 365일이다", () => {
+    expect(MAX_LOOKBACK_DAYS).toBe(365);
   });
 });
