@@ -58,6 +58,23 @@ function findSectionRange(
   return { lines, bodyStart, bodyEnd };
 }
 
+/**
+ * 한 줄을 통째로 차지하는 Obsidian 주석(`%% ... %%`).
+ *
+ * 스크럼 영역 마커가 이 형태라, 마커를 섹션 안쪽에 두면 섹션 본문으로 딸려온다.
+ * 섹션의 끝은 다음 `**[제목]**` 이나 `---` 로만 판단하기 때문이다. 그대로 옮기면
+ * 받는 노트에 마커가 하나 더 생겨 스크럼 복사가 "한 쌍이어야 합니다" 로 깨진다.
+ *
+ * 줄 중간에 낀 주석은 건드리지 않는다. 여러 줄에 걸친 주석 블록도 다루지 않는다 —
+ * 마커가 한 줄짜리라 여기까지면 충분하고, 더 넓히면 본문을 잘라먹을 위험이 커진다.
+ */
+const COMMENT_ONLY_LINE_RE = /^\s*%%.*%%\s*$/;
+
+/** 주석 전용 줄을 걷어낸다. 업무 내용이 아니라 표식이므로 옮기지 않는다. */
+function dropCommentOnlyLines(lines: string[]): string[] {
+  return lines.filter((line) => !COMMENT_ONLY_LINE_RE.test(line));
+}
+
 function trimBlankLines(lines: string[]): string[] {
   let start = 0;
   let end = lines.length;
@@ -75,9 +92,9 @@ export function extractSection(
   const range = findSectionRange(content, sectionName);
   if (!range) return null;
 
-  return trimBlankLines(range.lines.slice(range.bodyStart, range.bodyEnd)).join(
-    "\n"
-  );
+  return trimBlankLines(
+    dropCommentOnlyLines(range.lines.slice(range.bodyStart, range.bodyEnd))
+  ).join("\n");
 }
 
 export function hasWorkContent(body: string | null): body is string {

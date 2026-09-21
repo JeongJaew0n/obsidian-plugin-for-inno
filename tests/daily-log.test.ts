@@ -206,4 +206,74 @@ describe("이전 데일리 노트 탐색", () => {
   test("제한 값은 365일이다", () => {
     expect(MAX_LOOKBACK_DAYS).toBe(365);
   });
+
+  describe("스크럼 마커가 섹션 안에 걸쳐 있을 때", () => {
+    // 실제 노트 배치: 영역이 전일 섹션 '위'에서 시작해 금일 섹션 '안'에서 끝난다.
+    // 그래서 start 는 어느 섹션에도 안 속하고, end 만 금일 본문에 들어간다.
+    const yesterday = [
+      "%% inno-scrum:start %%",
+      "**[전일 진행 업무]**",
+      "- 업무 계획 :",
+      "",
+      "**[금일 예정 업무]**",
+      "- 업무 계획 :",
+      "\t- 캐시 API 개발",
+      "- 이슈 사항 : x",
+      "%% inno-scrum:end %%",
+      "",
+      "---",
+      "# 일 순서",
+    ].join("\n");
+
+    const today = [
+      "%% inno-scrum:start %%",
+      "**[전일 진행 업무]**",
+      "- 업무 계획 :",
+      "",
+      "**[금일 예정 업무]**",
+      "- 업무 계획 :",
+      "%% inno-scrum:end %%",
+      "",
+      "---",
+    ].join("\n");
+
+    test("섹션 추출에 마커가 딸려오지 않는다", () => {
+      const body = extractSection(yesterday, "금일 예정 업무");
+
+      expect(body).not.toContain("inno-scrum");
+      expect(body).toBe("- 업무 계획 :\n\t- 캐시 API 개발\n- 이슈 사항 : x");
+    });
+
+    test("옮겨도 받는 노트의 마커 쌍이 그대로 하나다", () => {
+      const body = extractSection(yesterday, "금일 예정 업무")!;
+      const updated = replaceSection(today, "전일 진행 업무", body)!;
+
+      expect((updated.match(/inno-scrum:start/g) ?? []).length).toBe(1);
+      expect((updated.match(/inno-scrum:end/g) ?? []).length).toBe(1);
+    });
+
+    test("마커뿐인 섹션은 내용 없음으로 본다", () => {
+      const note = [
+        "**[금일 예정 업무]**",
+        "%% inno-scrum:end %%",
+        "",
+        "---",
+      ].join("\n");
+
+      expect(hasWorkContent(extractSection(note, "금일 예정 업무"))).toBe(false);
+    });
+
+    test("줄 중간의 주석은 건드리지 않는다", () => {
+      const note = [
+        "**[금일 예정 업무]**",
+        "- 업무 계획 : 캐시 API %% 확인 필요 %%",
+        "",
+        "---",
+      ].join("\n");
+
+      expect(extractSection(note, "금일 예정 업무")).toBe(
+        "- 업무 계획 : 캐시 API %% 확인 필요 %%"
+      );
+    });
+  });
 });

@@ -76,6 +76,9 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 - 제목 줄 끝에 NBSP(` `)가 붙은 실제 노트가 있다. 정규화해서 비교한다.
 - 섹션 본문은 다음 섹션 제목 또는 `---` 를 만나면 끝난다.
 - 본문 교체 시 **앞뒤 빈 줄은 보존하고 내용만** 바꾼다.
+- **한 줄을 통째로 차지하는 `%% ... %%` 주석은 섹션 본문에서 뺀다.** 스크럼 마커가 그
+  형태라, 마커를 섹션 안쪽에 두면 본문으로 딸려와 받는 노트에 마커가 하나 더 생기고
+  스크럼 복사가 깨진다. 줄 중간 주석과 여러 줄 주석 블록은 다루지 않는다.
 
 ### 날짜와 폴더 규칙
 
@@ -98,7 +101,7 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 ## 테스트 경계
 
-자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (31개).
+자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (35개).
 **커맨드 등록, 설정 탭, 실제 Vault 쓰기, 클립보드는 자동 검증 대상이 아니다** — Obsidian
 API 목이 없고, 클립보드는 창 포커스와 권한에 의존해 헤드리스에서 재현되지 않는다.
 
