@@ -55,7 +55,7 @@ carryOverTomorrowSection(sourceContent, targetContent)
 | 있음 | 비었음 | `carried` | 채운다 |
 
 - 소스 노트 = **전일 진행 업무를 가져온 바로 그 노트.** 더 거슬러 찾지 않는다.
-- 섹션 이름 상수 `DEFAULT_CARRY_OVER_SECTION = "내일 이어서 할 것"`. 설정 항목 아님.
+- 섹션 이름은 설정 `carryOverSection`, 기본값 `DEFAULT_CARRY_OVER_SECTION = "내일 이어서 할 것"`. (처음엔 상수였다 — context.md D9)
 
 ### 4. 연결 (`main.ts`)
 
