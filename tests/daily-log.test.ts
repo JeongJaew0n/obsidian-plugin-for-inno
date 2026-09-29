@@ -276,4 +276,51 @@ describe("이전 데일리 노트 탐색", () => {
       );
     });
   });
+
+  describe("섹션 뒤에 마크다운 heading 이 붙은 배치", () => {
+    // 새 템플릿 배치: 금일 섹션과 --- 사이에 ### 섹션이 낀다.
+    const note = [
+      "%% inno-scrum:start %%",
+      "**[전일 진행 업무]**",
+      "- 업무 계획 :",
+      "",
+      "**[금일 예정 업무]**",
+      "- 업무 계획 :",
+      "\t- 캐시 API 개발",
+      "%% inno-scrum:end %%",
+      "",
+      "### 내일 이어서 할 것",
+      "- 리뷰 반영",
+      "",
+      "---",
+      "# 일 순서",
+    ].join("\n");
+
+    test("금일 섹션이 heading 에서 끝난다", () => {
+      expect(extractSection(note, "금일 예정 업무")).toBe(
+        "- 업무 계획 :\n\t- 캐시 API 개발"
+      );
+    });
+
+    test("전일 섹션에 heading 이 딸려가지 않는다", () => {
+      const body = extractSection(note, "금일 예정 업무")!;
+      const updated = replaceSection(note, "전일 진행 업무", body)!;
+
+      expect(updated.match(/내일 이어서 할 것/g)).toHaveLength(1);
+    });
+
+    test("#태그 로 시작하는 줄은 heading 이 아니다", () => {
+      const tagged = [
+        "**[금일 예정 업무]**",
+        "- 업무 계획 :",
+        "#회의 준비",
+        "",
+        "---",
+      ].join("\n");
+
+      expect(extractSection(tagged, "금일 예정 업무")).toBe(
+        "- 업무 계획 :\n#회의 준비"
+      );
+    });
+  });
 });

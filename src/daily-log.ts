@@ -31,6 +31,23 @@ function normalizeSectionHeading(line: string): string | null {
   return match ? match[1]!.replace(/\s+/g, " ").trim() : null;
 }
 
+/**
+ * 마크다운 heading 줄이면 레벨(1~6)과 제목을, 아니면 null.
+ *
+ * `#태그` 는 heading 이 아니다 — `#` 뒤에 공백(또는 줄 끝)이 있어야 한다.
+ * 들여쓰기는 마크다운 규칙대로 3칸까지만 인정한다. 4칸부터는 코드 블록이다.
+ */
+function parseMarkdownHeading(
+  line: string
+): { level: number; title: string } | null {
+  const match = line.replace(/\u00a0/g, " ").match(/^ {0,3}(#{1,6})(?:\s+(.*?))?\s*$/);
+  if (!match) return null;
+  return {
+    level: match[1]!.length,
+    title: (match[2] ?? "").replace(/\s+/g, " ").trim(),
+  };
+}
+
 function findSectionRange(
   content: string,
   sectionName: string
@@ -45,10 +62,13 @@ function findSectionRange(
 
   const bodyStart = headingIndex + 1;
   let bodyEnd = lines.length;
+  // 본문은 다음 `**[제목]**`, `---`, 또는 마크다운 heading 에서 끝난다.
+  // heading 을 빼면 금일 섹션 뒤에 붙인 `### 내일 이어서 할 것` 까지 본문으로 삼킨다.
   for (let i = bodyStart; i < lines.length; i++) {
     if (
       normalizeSectionHeading(lines[i]!) !== null ||
-      /^\s*---+\s*$/.test(lines[i]!)
+      /^\s*---+\s*$/.test(lines[i]!) ||
+      parseMarkdownHeading(lines[i]!) !== null
     ) {
       bodyEnd = i;
       break;
