@@ -22,6 +22,7 @@ import {
   replaceSection,
 } from "./daily-log";
 import { getTodayDate, renderDailyTemplate } from "./template";
+import { commandName } from "./features";
 import {
   SCRUM_MARKERS,
   assertNoScrumMarkers,
@@ -39,7 +40,7 @@ export default class InnoDailyLogPlugin extends Plugin {
 
     this.addCommand({
       id: "load-previous-work",
-      name: "전일 진행 업무 로드",
+      name: commandName("load-previous-work"),
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view?.file) return false;
@@ -52,7 +53,7 @@ export default class InnoDailyLogPlugin extends Plugin {
 
     this.addCommand({
       id: "insert-daily-template",
-      name: "데일리 노트 템플릿 삽입",
+      name: commandName("insert-daily-template"),
       editorCallback: (editor: Editor) => {
         editor.replaceSelection(
           renderDailyTemplate(this.settings.bodyTemplate, {
@@ -67,7 +68,7 @@ export default class InnoDailyLogPlugin extends Plugin {
 
     this.addCommand({
       id: "copy-scrum",
-      name: "스크럼(scrum) 내용 복사",
+      name: commandName("copy-scrum"),
       checkCallback: (checking: boolean) => {
         const view = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (!view?.file) return false;
@@ -80,7 +81,7 @@ export default class InnoDailyLogPlugin extends Plugin {
 
     this.addCommand({
       id: "insert-scrum-region",
-      name: "스크럼(scrum) 영역 넣기",
+      name: commandName("insert-scrum-region"),
       editorCallback: (editor: Editor) => {
         this.insertScrumRegion(editor);
       },
