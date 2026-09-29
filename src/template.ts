@@ -1,5 +1,3 @@
-import { DEFAULT_CARRY_OVER_SECTION } from "./daily-log";
-
 export const DEFAULT_BODY_TEMPLATE = [
   "**[{{previousSection}}]**",
   "- 업무 계획 :",
@@ -12,7 +10,7 @@ export const DEFAULT_BODY_TEMPLATE = [
   "- 협업 및 기타: x",
   "",
   // Vault 템플릿과 같은 자리. 전일 로드가 전날 이 섹션을 여기로 옮겨 온다.
-  `### ${DEFAULT_CARRY_OVER_SECTION}`,
+  "### {{carryOverSection}}",
   "",
   "",
   "---",
@@ -44,6 +42,7 @@ export function getTodayDate(format?: string): string {
 export interface DailyTemplateContext {
   previousSection: string;
   todaySection: string;
+  carryOverSection: string;
   date: string;
 }
 
@@ -59,5 +58,6 @@ export function renderDailyTemplate(
   return template
     .replace(/\{\{previousSection\}\}/g, context.previousSection)
     .replace(/\{\{todaySection\}\}/g, context.todaySection)
+    .replace(/\{\{carryOverSection\}\}/g, context.carryOverSection)
     .replace(/\{\{date\}\}/g, context.date);
 }

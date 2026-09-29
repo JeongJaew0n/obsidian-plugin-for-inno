@@ -29,11 +29,14 @@ describe("데일리 템플릿 렌더", () => {
   const rendered = renderDailyTemplate(DEFAULT_BODY_TEMPLATE, {
     previousSection: DEFAULT_PREVIOUS_WORK_SECTION,
     todaySection: DEFAULT_TODAY_WORK_SECTION,
+    carryOverSection: DEFAULT_CARRY_OVER_SECTION,
     date: "2026-09-01",
   });
 
   test("치환 변수가 남지 않는다", () => {
     expect(rendered).not.toContain("{{");
+    // 테스트는 타입 검사를 거치지 않는다. 컨텍스트에 값이 빠지면 "undefined" 로 치환된다.
+    expect(rendered).not.toContain("undefined");
   });
 
   test("렌더 결과를 daily-log 가 다시 읽을 수 있다", () => {
@@ -59,6 +62,7 @@ describe("데일리 템플릿 렌더", () => {
     const today = renderDailyTemplate(DEFAULT_BODY_TEMPLATE, {
       previousSection: "전일 진행 업무",
       todaySection: "금일 예정 업무",
+      carryOverSection: DEFAULT_CARRY_OVER_SECTION,
       date: "2026-09-29",
     });
     expect(extractHeadingSection(today, DEFAULT_CARRY_OVER_SECTION)).toBe("");
@@ -68,5 +72,16 @@ describe("데일리 템플릿 렌더", () => {
       `### ${DEFAULT_CARRY_OVER_SECTION}\n- 이어서 할 일\n`
     );
     expect(carryOverSection(yesterday, today).result).toBe("carried");
+  });
+
+  test("이월 섹션 이름을 바꾸면 템플릿 제목도 따라간다", () => {
+    const today = renderDailyTemplate(DEFAULT_BODY_TEMPLATE, {
+      previousSection: "전일 진행 업무",
+      todaySection: "금일 예정 업무",
+      carryOverSection: "이어서 할 일",
+      date: "2026-09-29",
+    });
+    expect(today).toContain("### 이어서 할 일");
+    expect(today).not.toContain(DEFAULT_CARRY_OVER_SECTION);
   });
 });

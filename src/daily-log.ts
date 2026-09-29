@@ -229,6 +229,11 @@ export function carryOverSection(
   targetContent: string,
   sectionName: string = DEFAULT_CARRY_OVER_SECTION
 ): { content: string; result: CarryOverResult; lines: number } {
+  // 이름이 비면 제목 없는 `###` 에 걸린다. 설정 파일을 손으로 고친 경우를 막는다.
+  if (!sectionName.trim()) {
+    return { content: targetContent, result: "no-source", lines: 0 };
+  }
+
   const source = extractHeadingSection(sourceContent, sectionName);
   if (!hasWorkContent(source)) {
     return { content: targetContent, result: "no-source", lines: 0 };

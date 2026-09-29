@@ -469,4 +469,32 @@ describe("이전 데일리 노트 탐색", () => {
       expect(f("updated", "no-source")).toBe("2026-09-28의 업무를 불러왔습니다.");
     });
   });
+
+  describe("이월 섹션 이름 설정", () => {
+    const src = "### 이어서 할 일\n- a\n\n---";
+    const dst = "### 이어서 할 일\n\n---";
+
+    test("바꾼 이름으로 찾아 옮긴다", () => {
+      expect(carryOverSection(src, dst, "이어서 할 일").result).toBe("carried");
+    });
+
+    test("기본 이름으로는 못 찾는다 — 이름이 곧 기준이다", () => {
+      expect(carryOverSection(src, dst).result).toBe("no-source");
+    });
+
+    test("이름이 비면 아무것도 안 한다 — 제목 없는 ### 에 걸리지 않게", () => {
+      const bare = "###\n- a\n\n---";
+      expect(carryOverSection(bare, "###\n\n---", "  ")).toEqual({
+        content: "###\n\n---",
+        result: "no-source",
+        lines: 0,
+      });
+    });
+
+    test("알림에 바꾼 이름이 들어간다", () => {
+      expect(
+        formatLoadNotice("updated", "2026-09-28", "금일 예정 업무", "carried", 2, "이어서 할 일")
+      ).toBe("2026-09-28의 업무를 불러왔습니다. 이어서 할 일 2줄도 가져왔습니다.");
+    });
+  });
 });

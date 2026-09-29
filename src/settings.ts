@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type InnoDailyLogPlugin from "./main";
 import {
+  DEFAULT_CARRY_OVER_SECTION,
   DEFAULT_PREVIOUS_WORK_SECTION,
   DEFAULT_TODAY_WORK_SECTION,
 } from "./daily-log";
@@ -11,6 +12,7 @@ export { DEFAULT_BODY_TEMPLATE };
 export interface InnoDailyLogSettings {
   previousWorkSection: string;
   todayWorkSection: string;
+  carryOverSection: string;
   dailyNoteRoot: string;
   bodyTemplate: string;
 }
@@ -18,6 +20,7 @@ export interface InnoDailyLogSettings {
 export const DEFAULT_SETTINGS: InnoDailyLogSettings = {
   previousWorkSection: DEFAULT_PREVIOUS_WORK_SECTION,
   todayWorkSection: DEFAULT_TODAY_WORK_SECTION,
+  carryOverSection: DEFAULT_CARRY_OVER_SECTION,
   dailyNoteRoot: "",
   bodyTemplate: DEFAULT_BODY_TEMPLATE,
 };
@@ -65,6 +68,22 @@ export class InnoDailyLogSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("이월 섹션 이름")
+      .setDesc(
+        "전날 노트에서 오늘 노트의 같은 섹션으로 옮길 heading 섹션. 노트에는 ### 이름 처럼 heading 으로 적혀 있어야 합니다 (레벨 무관). 이름을 바꾸면 Vault 템플릿의 제목도 같이 바꿔야 합니다."
+      )
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_CARRY_OVER_SECTION)
+          .setValue(this.plugin.settings.carryOverSection)
+          .onChange(async (value) => {
+            this.plugin.settings.carryOverSection =
+              value.trim() || DEFAULT_CARRY_OVER_SECTION;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
       .setName("데일리 노트 루트 폴더")
       .setDesc(
         "전일 노트를 찾을 범위. 비워두면 현재 노트의 부모 폴더를 쓰되, 부모가 YYYY-MM 형태의 월 폴더면 한 단계 위를 씁니다."
@@ -82,7 +101,7 @@ export class InnoDailyLogSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName("본문 템플릿")
       .setDesc(
-        "템플릿 삽입 커맨드가 넣을 본문. {{previousSection}}, {{todaySection}}, {{date}} 를 쓸 수 있습니다."
+        "템플릿 삽입 커맨드가 넣을 본문. {{previousSection}}, {{todaySection}}, {{carryOverSection}}, {{date}} 를 쓸 수 있습니다."
       )
       .addTextArea((textArea) => {
         textArea

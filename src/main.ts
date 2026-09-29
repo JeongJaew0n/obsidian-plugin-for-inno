@@ -58,6 +58,7 @@ export default class InnoDailyLogPlugin extends Plugin {
           renderDailyTemplate(this.settings.bodyTemplate, {
             previousSection: this.settings.previousWorkSection,
             todaySection: this.settings.todayWorkSection,
+            carryOverSection: this.settings.carryOverSection,
             date: getTodayDate(),
           })
         );
@@ -295,7 +296,11 @@ export default class InnoDailyLogPlugin extends Plugin {
       updateResult = replaced === currentContent ? "unchanged" : "updated";
 
       // "전날" 은 전일 업무를 가져온 바로 그 노트다. 거기 없으면 더 찾지 않는다.
-      const carried = carryOverSection(source.content, replaced);
+      const carried = carryOverSection(
+        source.content,
+        replaced,
+        this.settings.carryOverSection
+      );
       carry = { result: carried.result, lines: carried.lines };
       return carried.content;
     };
@@ -323,7 +328,8 @@ export default class InnoDailyLogPlugin extends Plugin {
         source.date,
         this.settings.todayWorkSection,
         carry.result,
-        carry.lines
+        carry.lines,
+        this.settings.carryOverSection
       )
     );
   }
