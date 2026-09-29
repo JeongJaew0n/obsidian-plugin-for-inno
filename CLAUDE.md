@@ -41,7 +41,7 @@ TypeScript 5.8 / esbuild 0.25 (cjs 번들 → `main.js`) / jest + ts-jest.
 
 | ToolGroup | 포함 | 파일 |
 |---|---|---|
-| 데일리 로그 | 전일 진행 업무 로드, 데일리 노트 템플릿 삽입 | `daily-log.ts` · `template.ts` |
+| 데일리 로그 | 전일 진행 업무 로드(+ 내일 이어서 할 것 이월), 데일리 노트 템플릿 삽입 | `daily-log.ts` · `template.ts` |
 | 스크럼(scrum) | 스크럼 내용 복사, 스크럼 영역 넣기 | `scrum.ts` · `markers.ts` |
 
 지금은 `src/` 가 평평하다. **세 번째 ToolGroup 이 생기면 그때 `src/<toolgroup>/` 로 나눈다** —
@@ -74,7 +74,15 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 - 섹션 제목은 `**[이름]**` 형태(볼드 대괄호)다. **마크다운 heading 이 아니다.**
 - 제목 줄 끝에 NBSP(` `)가 붙은 실제 노트가 있다. 정규화해서 비교한다.
-- 섹션 본문은 다음 섹션 제목 또는 `---` 를 만나면 끝난다.
+- 섹션 본문은 다음 섹션 제목, `---`, 또는 **마크다운 heading** 을 만나면 끝난다.
+  heading 을 빼면 금일 섹션 뒤의 `### 내일 이어서 할 것` 까지 본문으로 삼킨다.
+  `#태그` 는 heading 이 아니다 (`#` 뒤 공백 필수).
+- **섹션은 두 종류다.** `**[이름]**` 은 플러그인이 채우는 칸이라 덮어쓰고,
+  heading 섹션(`### 내일 이어서 할 것`)은 사람이 하루 종일 고치는 칸이라 **비어 있을 때만**
+  채운다. 이 차이를 지운다고 일관성이 생기는 게 아니다 — 사람이 쓴 걸 날린다.
+- 이월의 "전날" 은 **전일 업무를 가져온 바로 그 노트**다. 거기 없으면 더 찾지 않는다.
+  바로 앞 날짜 노트로 바꾸면 빈 주말 노트에서 끊겨 금요일 항목을 잃는다.
+  설계 근거: `docs/plans/carry-over-tomorrow-section/`
 - 본문 교체 시 **앞뒤 빈 줄은 보존하고 내용만** 바꾼다.
 - **한 줄을 통째로 차지하는 `%% ... %%` 주석은 섹션 본문에서 뺀다.** 스크럼 마커가 그
   형태라, 마커를 섹션 안쪽에 두면 본문으로 딸려와 받는 노트에 마커가 하나 더 생기고
@@ -101,7 +109,7 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 ## 테스트 경계
 
-자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (35개).
+자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (53개).
 **커맨드 등록, 설정 탭, 실제 Vault 쓰기, 클립보드는 자동 검증 대상이 아니다** — Obsidian
 API 목이 없고, 클립보드는 창 포커스와 권한에 의존해 헤드리스에서 재현되지 않는다.
 
@@ -167,7 +175,7 @@ vault 경로는 스킬의 `config.json` 에 저장돼 있다.
 
   1.x 에서는 호환 깨짐이 MAJOR 를 올리지만 **0.x 에는 올릴 MAJOR 가 없다.** 그래서
   MINOR 가 그 역할을 대신한다. semver 규격 본문이 아니라 0.x 구간의 관례다.
-- 번호의 **정본은 `package.json` 의 `version`** 이다. 현재 `0.2.0`.
+- 번호의 **정본은 `package.json` 의 `version`** 이다. 현재 `0.3.0`.
   `manifest.json` 과 `versions.json` 의 번호는 `npm version` 이 `version-bump.mjs` 로
   **생성**하는 사본이다. 손으로 고치지 않는다 — 정본은 한 곳이다.
 - 올릴 때는 `npm version <patch|minor> --no-git-tag-version` 을 쓴다.
