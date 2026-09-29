@@ -34,7 +34,8 @@ TypeScript 5.8 / esbuild 0.25 (cjs 번들 → `main.js`) / jest + ts-jest.
 | `src/template.ts` | 기본 양식 상수, 날짜 포맷, 변수 치환 | **없음** |
 | `src/markers.ts` | 마커 쌍으로 감싼 영역 탐색 (코드블록·frontmatter 안은 무시) | **없음** |
 | `src/scrum.ts` | 스크럼 마커 상수, 영역 추출·검증, 새 영역 생성 | **없음** |
-| `src/settings.ts` | 설정 타입·기본값·설정 탭 | 있음 |
+| `src/features.ts` | ToolGroup·기능 목록 (**정본**). 커맨드 이름과 설정의 기능 탭이 여기를 읽는다 | **없음** |
+| `src/settings.ts` | 설정 타입·기본값·설정 탭 (`설정` / `기능` 탭) | 있음 |
 | `src/main.ts` | 플러그인 진입, 커맨드 등록, Vault 입출력 | 있음 |
 
 기능을 묶는 단위는 **ToolGroup** 이다 (→ `docs/glossary/README.md`). 현재 두 개다.
@@ -47,6 +48,10 @@ TypeScript 5.8 / esbuild 0.25 (cjs 번들 → `main.js`) / jest + ts-jest.
 지금은 `src/` 가 평평하다. **세 번째 ToolGroup 이 생기면 그때 `src/<toolgroup>/` 로 나눈다** —
 두 개뿐인데 미리 나누면 왕복만 는다. 새 기능은 기존 ToolGroup 에 넣을지 새로 만들지
 먼저 정하고 시작한다.
+
+**기능을 추가·개명하면 `src/features.ts` 부터 고친다.** 커맨드 이름은 `commandName(id)` 로
+거기서 꺼내므로, 목록에 없는 id 로 `addCommand` 하면 로드 때 던진다. 설정의 기능 탭도
+같은 목록을 그린다. 이름을 두 군데 적지 않는다.
 
 이 경계가 곧 테스트 가능 범위다. 아래를 반드시 읽을 것.
 
@@ -112,7 +117,7 @@ Cannot find module 'obsidian' from 'src/settings.ts'
 
 ## 테스트 경계
 
-자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (58개).
+자동 테스트는 `daily-log.ts` / `template.ts` / `scrum.ts` / `markers.ts` 순수 함수만 덮는다 (65개).
 **커맨드 등록, 설정 탭, 실제 Vault 쓰기, 클립보드는 자동 검증 대상이 아니다** — Obsidian
 API 목이 없고, 클립보드는 창 포커스와 권한에 의존해 헤드리스에서 재현되지 않는다.
 
@@ -178,7 +183,7 @@ vault 경로는 스킬의 `config.json` 에 저장돼 있다.
 
   1.x 에서는 호환 깨짐이 MAJOR 를 올리지만 **0.x 에는 올릴 MAJOR 가 없다.** 그래서
   MINOR 가 그 역할을 대신한다. semver 규격 본문이 아니라 0.x 구간의 관례다.
-- 번호의 **정본은 `package.json` 의 `version`** 이다. 현재 `0.4.0`.
+- 번호의 **정본은 `package.json` 의 `version`** 이다. 현재 `0.5.0`.
   `manifest.json` 과 `versions.json` 의 번호는 `npm version` 이 `version-bump.mjs` 로
   **생성**하는 사본이다. 손으로 고치지 않는다 — 정본은 한 곳이다.
 - 올릴 때는 `npm version <patch|minor> --no-git-tag-version` 을 쓴다.
