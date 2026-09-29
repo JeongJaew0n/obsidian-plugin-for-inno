@@ -157,6 +157,137 @@ export function replaceSection(
   ].join("\n");
 }
 
+/** 전날 노트에서 오늘 노트의 같은 섹션으로 굴려 넘기는 heading 섹션. */
+export const DEFAULT_CARRY_OVER_SECTION = "내일 이어서 할 것";
+
+/**
+ * 마크다운 heading 섹션(`### 이름`)의 범위. 레벨은 가리지 않고 제목 텍스트로 찾는다.
+ *
+ * 본문은 `---`, `**[제목]**`, 자기와 같거나 높은 레벨의 heading 에서 끝난다.
+ * 하위 heading(`###` 아래 `####`)은 본문에 포함한다.
+ */
+function findHeadingSectionRange(
+  content: string,
+  sectionName: string
+): { lines: string[]; bodyStart: number; bodyEnd: number } | null {
+  const lines = content.split("\n");
+  const normalizedName = sectionName.replace(/\s+/g, " ").trim();
+  const headingIndex = lines.findIndex(
+    (line) => parseMarkdownHeading(line)?.title === normalizedName
+  );
+  if (headingIndex === -1) return null;
+
+  const level = parseMarkdownHeading(lines[headingIndex]!)!.level;
+  const bodyStart = headingIndex + 1;
+  let bodyEnd = lines.length;
+  for (let i = bodyStart; i < lines.length; i++) {
+    const heading = parseMarkdownHeading(lines[i]!);
+    if (
+      normalizeSectionHeading(lines[i]!) !== null ||
+      /^\s*---+\s*$/.test(lines[i]!) ||
+      (heading !== null && heading.level <= level)
+    ) {
+      bodyEnd = i;
+      break;
+    }
+  }
+
+  return { lines, bodyStart, bodyEnd };
+}
+
+export function extractHeadingSection(
+  content: string,
+  sectionName: string
+): string | null {
+  const range = findHeadingSectionRange(content, sectionName);
+  if (!range) return null;
+
+  return trimBlankLines(
+    dropCommentOnlyLines(range.lines.slice(range.bodyStart, range.bodyEnd))
+  ).join("\n");
+}
+
+/**
+ * - `no-source` 전날 노트에 섹션이 없거나 비었다
+ * - `no-target` 오늘 노트에 섹션이 없다 — 만들지 않는다
+ * - `occupied`  오늘 섹션에 이미 내용이 있다 — 덮지 않는다
+ * - `carried`   비어 있던 오늘 섹션을 채웠다
+ */
+export type CarryOverResult = "no-source" | "no-target" | "occupied" | "carried";
+
+/**
+ * 전날 노트의 heading 섹션을 오늘 노트의 같은 섹션으로 옮긴다.
+ *
+ * 오늘 섹션이 **비어 있을 때만** 채운다. 전일 진행 업무는 플러그인이 채우는 칸이라
+ * 덮어쓰지만, 이 섹션은 사람이 하루 종일 고치는 칸이다. 늦게 돌려도 그날 쓴 것이
+ * 날아가지 않고, 다시 돌리면 `occupied` 로 끝나 결과가 같다.
+ *
+ * 전날에 없으면 더 과거를 찾지 않는다. 소스는 호출하는 쪽이 고른 한 노트뿐이다.
+ */
+export function carryOverSection(
+  sourceContent: string,
+  targetContent: string,
+  sectionName: string = DEFAULT_CARRY_OVER_SECTION
+): { content: string; result: CarryOverResult; lines: number } {
+  const source = extractHeadingSection(sourceContent, sectionName);
+  if (!hasWorkContent(source)) {
+    return { content: targetContent, result: "no-source", lines: 0 };
+  }
+
+  const range = findHeadingSectionRange(targetContent, sectionName);
+  if (!range) {
+    return { content: targetContent, result: "no-target", lines: 0 };
+  }
+
+  const existingBody = range.lines.slice(range.bodyStart, range.bodyEnd);
+  if (hasWorkContent(trimBlankLines(dropCommentOnlyLines(existingBody)).join("\n"))) {
+    return { content: targetContent, result: "occupied", lines: 0 };
+  }
+
+  // 비어 있는 본문(빈 줄·주석 줄뿐)은 그대로 두고 그 위에 채운다.
+  // 템플릿의 빈 줄이 `---` 앞 간격으로 남는다.
+  const carried = source.split("\n");
+  return {
+    content: [
+      ...range.lines.slice(0, range.bodyStart),
+      ...carried,
+      ...existingBody,
+      ...range.lines.slice(range.bodyEnd),
+    ].join("\n"),
+    result: "carried",
+    lines: carried.length,
+  };
+}
+
+/**
+ * 전일 로드 결과와 이월 결과를 알림 한 줄로 합친다.
+ * 전날에 없던 경우(`no-source`)는 조용히 둔다 — 매일 뜨면 소음이다.
+ */
+export function formatLoadNotice(
+  load: "updated" | "unchanged",
+  date: string,
+  todaySection: string,
+  carry: CarryOverResult,
+  carriedLines: number,
+  carrySection: string = DEFAULT_CARRY_OVER_SECTION
+): string {
+  const base =
+    load === "updated"
+      ? `${date}의 업무를 불러왔습니다.`
+      : `이미 ${date}의 '${todaySection}'가 반영되어 있습니다.`;
+
+  switch (carry) {
+    case "carried":
+      return `${base} ${carrySection} ${carriedLines}줄도 가져왔습니다.`;
+    case "occupied":
+      return `${base} ${carrySection}은 이미 적혀 있어 그대로 뒀습니다.`;
+    case "no-target":
+      return `${base} 이 노트에 '${carrySection}' 섹션이 없어 가져오지 않았습니다.`;
+    case "no-source":
+      return base;
+  }
+}
+
 export function getDailyNoteDate(path: string): string | null {
   return DAILY_NOTE_DATE_RE.exec(path)?.[1] ?? null;
 }

@@ -12,7 +12,10 @@ import {
   type InnoDailyLogSettings,
 } from "./settings";
 import {
+  type CarryOverResult,
+  carryOverSection,
   extractSection,
+  formatLoadNotice,
   getDailyNoteDate,
   getPreviousDailyNotePaths,
   hasWorkContent,
@@ -223,7 +226,7 @@ export default class InnoDailyLogPlugin extends Plugin {
 
   private async findPreviousWork(
     file: TFile
-  ): Promise<{ body: string; date: string } | null> {
+  ): Promise<{ body: string; date: string; content: string } | null> {
     const markdownFiles = this.app.vault.getMarkdownFiles();
     const filesByPath = new Map(markdownFiles.map((note) => [note.path, note]));
     const candidatePaths = getPreviousDailyNotePaths(
@@ -246,7 +249,8 @@ export default class InnoDailyLogPlugin extends Plugin {
       const date = getDailyNoteDate(candidatePath);
       if (!date) continue;
 
-      return { body: extracted, date };
+      // 원문도 넘긴다 — 내일 이어서 할 것을 같은 노트에서 다시 읽지 않고 꺼낸다.
+      return { body: extracted, date, content: candidateContent };
     }
 
     return null;
@@ -273,21 +277,27 @@ export default class InnoDailyLogPlugin extends Plugin {
     }
 
     let updateResult: UpdateResult = "missing";
+    let carry: { result: CarryOverResult; lines: number } = {
+      result: "no-source",
+      lines: 0,
+    };
+    // 전일 섹션 교체와 이월을 한 번의 쓰기 안에서 한다. 두 번 쓰면 사이에
+    // 에디터 변경이 끼어들 수 있다.
     const updateCurrentContent = (currentContent: string): string => {
-      const updatedContent = replaceSection(
+      const replaced = replaceSection(
         currentContent,
         this.settings.previousWorkSection,
         source.body
       );
 
-      if (updatedContent === null) return currentContent;
-      if (updatedContent === currentContent) {
-        updateResult = "unchanged";
-        return currentContent;
-      }
+      // 전일 섹션이 없으면 템플릿이 아닌 노트로 보고 이월도 하지 않는다.
+      if (replaced === null) return currentContent;
+      updateResult = replaced === currentContent ? "unchanged" : "updated";
 
-      updateResult = "updated";
-      return updatedContent;
+      // "전날" 은 전일 업무를 가져온 바로 그 노트다. 거기 없으면 더 찾지 않는다.
+      const carried = carryOverSection(source.content, replaced);
+      carry = { result: carried.result, lines: carried.lines };
+      return carried.content;
     };
 
     if (typeof this.app.vault.process === "function") {
@@ -307,13 +317,14 @@ export default class InnoDailyLogPlugin extends Plugin {
       return;
     }
 
-    if (updateResult === "unchanged") {
-      new Notice(
-        `이미 ${source.date}의 '${this.settings.todayWorkSection}'가 반영되어 있습니다.`
-      );
-      return;
-    }
-
-    new Notice(`${source.date}의 업무를 불러왔습니다.`);
+    new Notice(
+      formatLoadNotice(
+        updateResult,
+        source.date,
+        this.settings.todayWorkSection,
+        carry.result,
+        carry.lines
+      )
+    );
   }
 }

@@ -1,5 +1,9 @@
 import {
+  DEFAULT_CARRY_OVER_SECTION,
   DEFAULT_PREVIOUS_WORK_SECTION,
+  carryOverSection,
+  extractHeadingSection,
+  formatLoadNotice,
   MAX_LOOKBACK_DAYS,
   DEFAULT_TODAY_WORK_SECTION,
   extractSection,
@@ -321,6 +325,148 @@ describe("이전 데일리 노트 탐색", () => {
       expect(extractSection(tagged, "금일 예정 업무")).toBe(
         "- 업무 계획 :\n#회의 준비"
       );
+    });
+  });
+
+  describe("heading 섹션 추출", () => {
+    test("레벨을 가리지 않고 제목으로 찾는다", () => {
+      for (const h of ["#", "##", "###", "######"]) {
+        const note = `${h} 내일 이어서 할 것\n- a\n\n---`;
+        expect(extractHeadingSection(note, "내일 이어서 할 것")).toBe("- a");
+      }
+    });
+
+    test("하위 heading 은 본문에 포함하고, 같은 레벨에서 끊는다", () => {
+      const note = [
+        "### 내일 이어서 할 것",
+        "- a",
+        "#### 세부",
+        "- b",
+        "### 다른 주제",
+        "- c",
+      ].join("\n");
+
+      expect(extractHeadingSection(note, "내일 이어서 할 것")).toBe(
+        "- a\n#### 세부\n- b"
+      );
+    });
+
+    test("상위 heading, **[제목]**, --- 에서 끊는다", () => {
+      const tail = ["# 일 순서", "**[금일 예정 업무]**", "---"];
+      for (const end of tail) {
+        const note = `### 내일 이어서 할 것\n- a\n${end}\n- z`;
+        expect(extractHeadingSection(note, "내일 이어서 할 것")).toBe("- a");
+      }
+    });
+
+    test("NBSP 가 붙은 제목도 찾고, 주석 전용 줄은 뺀다", () => {
+      const note = "### 내일 이어서 할 것\u00a0\n%% 메모 %%\n- a\n\n---";
+      expect(extractHeadingSection(note, "내일 이어서 할 것")).toBe("- a");
+    });
+
+    test("없으면 null", () => {
+      expect(extractHeadingSection("# 일 순서\n- a", "내일 이어서 할 것")).toBeNull();
+    });
+  });
+
+  describe("내일 이어서 할 것 이월", () => {
+    const section = DEFAULT_CARRY_OVER_SECTION;
+    const yesterday = [
+      "**[금일 예정 업무]**",
+      "- 업무 계획 :",
+      "",
+      `### ${section}`,
+      "- 리뷰 반영",
+      "\t- 코멘트 3건",
+      "",
+      "---",
+      "# 일 순서",
+    ].join("\n");
+    const emptyToday = [
+      "**[금일 예정 업무]**",
+      "- 업무 계획 :",
+      "",
+      `### ${section}`,
+      "",
+      "",
+      "---",
+      "# 일 순서",
+    ].join("\n");
+
+    test("오늘 섹션이 비어 있으면 채운다 — 템플릿 빈 줄은 --- 앞 간격으로 남긴다", () => {
+      const out = carryOverSection(yesterday, emptyToday);
+
+      expect(out.result).toBe("carried");
+      expect(out.lines).toBe(2);
+      expect(out.content).toBe(
+        [
+          "**[금일 예정 업무]**",
+          "- 업무 계획 :",
+          "",
+          `### ${section}`,
+          "- 리뷰 반영",
+          "\t- 코멘트 3건",
+          "",
+          "",
+          "---",
+          "# 일 순서",
+        ].join("\n")
+      );
+    });
+
+    test("전날에 섹션이 없으면 가져오지 않는다", () => {
+      const out = carryOverSection("**[금일 예정 업무]**\n- a\n---", emptyToday);
+      expect(out).toEqual({ content: emptyToday, result: "no-source", lines: 0 });
+    });
+
+    test("전날 섹션이 비었으면 가져오지 않는다", () => {
+      const out = carryOverSection(emptyToday, emptyToday);
+      expect(out.result).toBe("no-source");
+      expect(out.content).toBe(emptyToday);
+    });
+
+    test("오늘 노트에 섹션이 없으면 만들지 않는다", () => {
+      const noSection = "**[금일 예정 업무]**\n- a\n---\n# 일 순서";
+      const out = carryOverSection(yesterday, noSection);
+      expect(out).toEqual({ content: noSection, result: "no-target", lines: 0 });
+    });
+
+    test("오늘 섹션에 이미 내용이 있으면 덮지 않는다", () => {
+      const written = emptyToday.replace(`### ${section}\n`, `### ${section}\n- 오늘 직접 쓴 것\n`);
+      const out = carryOverSection(yesterday, written);
+      expect(out).toEqual({ content: written, result: "occupied", lines: 0 });
+    });
+
+    test("다시 돌려도 결과가 같다 — 두 번째는 occupied", () => {
+      const first = carryOverSection(yesterday, emptyToday);
+      const second = carryOverSection(yesterday, first.content);
+
+      expect(second.result).toBe("occupied");
+      expect(second.content).toBe(first.content);
+    });
+
+    test("스크럼 마커가 섞여 있어도 옮기지 않는다", () => {
+      const withMarker = yesterday.replace("- 리뷰 반영", "%% inno-scrum:end %%\n- 리뷰 반영");
+      const out = carryOverSection(withMarker, emptyToday);
+      expect(out.content).not.toContain("inno-scrum");
+    });
+  });
+
+  describe("로드 알림", () => {
+    const f = (load: "updated" | "unchanged", carry: Parameters<typeof formatLoadNotice>[3], n = 0) =>
+      formatLoadNotice(load, "2026-09-28", "금일 예정 업무", carry, n);
+
+    test("이월 결과를 한 줄로 합친다", () => {
+      expect(f("updated", "carried", 5)).toBe(
+        "2026-09-28의 업무를 불러왔습니다. 내일 이어서 할 것 5줄도 가져왔습니다."
+      );
+      expect(f("updated", "occupied")).toContain("이미 적혀 있어 그대로 뒀습니다");
+      expect(f("updated", "no-target")).toContain("섹션이 없어 가져오지 않았습니다");
+      expect(f("unchanged", "occupied")).toMatch(/^이미 2026-09-28의 '금일 예정 업무'가 반영되어 있습니다\./);
+    });
+
+    test("전날에 없으면 조용히 둔다", () => {
+      expect(f("updated", "no-source")).toBe("2026-09-28의 업무를 불러왔습니다.");
     });
   });
 });

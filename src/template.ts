@@ -1,3 +1,5 @@
+import { DEFAULT_CARRY_OVER_SECTION } from "./daily-log";
+
 export const DEFAULT_BODY_TEMPLATE = [
   "**[{{previousSection}}]**",
   "- 업무 계획 :",
@@ -8,6 +10,10 @@ export const DEFAULT_BODY_TEMPLATE = [
   "- 업무 계획 :",
   "- 이슈 사항 : x",
   "- 협업 및 기타: x",
+  "",
+  // Vault 템플릿과 같은 자리. 전일 로드가 전날 이 섹션을 여기로 옮겨 온다.
+  `### ${DEFAULT_CARRY_OVER_SECTION}`,
+  "",
   "",
   "---",
   "# 일 순서",

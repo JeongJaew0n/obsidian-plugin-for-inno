@@ -1,3 +1,4 @@
+import { DEFAULT_CARRY_OVER_SECTION, carryOverSection, extractHeadingSection } from "../src/daily-log";
 import {
   DEFAULT_BODY_TEMPLATE,
   formatDate,
@@ -52,5 +53,20 @@ describe("데일리 템플릿 렌더", () => {
         date: "2026-09-01",
       })
     ).toBe("# 2026-09-01 일지");
+  });
+
+  test("내장 템플릿에 내일 이어서 할 것이 빈 채로 있어 이월 목적지가 된다", () => {
+    const today = renderDailyTemplate(DEFAULT_BODY_TEMPLATE, {
+      previousSection: "전일 진행 업무",
+      todaySection: "금일 예정 업무",
+      date: "2026-09-29",
+    });
+    expect(extractHeadingSection(today, DEFAULT_CARRY_OVER_SECTION)).toBe("");
+
+    const yesterday = today.replace(
+      `### ${DEFAULT_CARRY_OVER_SECTION}\n`,
+      `### ${DEFAULT_CARRY_OVER_SECTION}\n- 이어서 할 일\n`
+    );
+    expect(carryOverSection(yesterday, today).result).toBe("carried");
   });
 });
